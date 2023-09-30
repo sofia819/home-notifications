@@ -34,7 +34,9 @@ public class AlertManager {
     }
 
     LocalTime now = LocalTime.now();
-    return now.getHour() >= 8 && now.getHour() <= 20;
+    int startHour = Integer.parseInt(System.getenv("START_HOUR"));
+    int endHour = Integer.parseInt(System.getenv("END_HOUR"));
+    return now.getHour() >= startHour && now.getHour() <= endHour;
   }
 
   public AlertMessageResponse sendTextAlert() {
