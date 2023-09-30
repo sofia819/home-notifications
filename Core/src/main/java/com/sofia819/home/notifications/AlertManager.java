@@ -29,7 +29,6 @@ public class AlertManager {
   }
 
   public boolean shouldSendAlert() {
-    LOG.info("Alert is {}", alertEnabled);
     if (!alertEnabled) {
       return false;
     }

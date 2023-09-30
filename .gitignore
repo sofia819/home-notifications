@@ -27,5 +27,6 @@ replay_pid*
 .project
 .settings/
 .idea
+*.iml
 target
 target/*
