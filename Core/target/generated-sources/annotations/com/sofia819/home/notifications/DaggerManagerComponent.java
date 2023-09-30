@@ -53,7 +53,7 @@ public final class DaggerManagerComponent {
     @SuppressWarnings("unchecked")
     private void initialize() {
       this.alertManagerProvider = DoubleCheck.provider(AlertManager_Factory.create());
-      this.doorManagerProvider = DoubleCheck.provider(DoorManager_Factory.create());
+      this.doorManagerProvider = DoubleCheck.provider(DoorManager_Factory.create(alertManagerProvider));
     }
 
     @Override

@@ -5,6 +5,7 @@ import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
 import dagger.internal.ScopeMetadata;
 import javax.annotation.processing.Generated;
+import javax.inject.Provider;
 
 @ScopeMetadata("javax.inject.Singleton")
 @QualifierMetadata
@@ -20,20 +21,22 @@ import javax.annotation.processing.Generated;
     "KotlinInternalInJava"
 })
 public final class DoorManager_Factory implements Factory<DoorManager> {
+  private final Provider<AlertManager> alertManagerProvider;
+
+  public DoorManager_Factory(Provider<AlertManager> alertManagerProvider) {
+    this.alertManagerProvider = alertManagerProvider;
+  }
+
   @Override
   public DoorManager get() {
-    return newInstance();
+    return newInstance(alertManagerProvider.get());
   }
 
-  public static DoorManager_Factory create() {
-    return InstanceHolder.INSTANCE;
+  public static DoorManager_Factory create(Provider<AlertManager> alertManagerProvider) {
+    return new DoorManager_Factory(alertManagerProvider);
   }
 
-  public static DoorManager newInstance() {
-    return new DoorManager();
-  }
-
-  private static final class InstanceHolder {
-    private static final DoorManager_Factory INSTANCE = new DoorManager_Factory();
+  public static DoorManager newInstance(AlertManager alertManager) {
+    return new DoorManager(alertManager);
   }
 }

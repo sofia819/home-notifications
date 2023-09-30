@@ -41,9 +41,9 @@ public class StatusResource {
   @GET
   @Path("/door")
   public DoorStatusResponse isDoorOpened() {
-    return new DoorStatusResponse(doorManager.getIsDoorOpened());
+    return new DoorStatusResponse(doorManager.getIsDoorOpened(),
+        doorManager.getDoorOpenedSince());
   }
-
 
   @PUT
   @Path("/door")

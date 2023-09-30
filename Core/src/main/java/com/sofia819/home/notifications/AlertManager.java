@@ -25,9 +25,11 @@ public class AlertManager {
 
   public void toggleAlertEnabled() {
     alertEnabled = !alertEnabled;
+    LOG.info("Alert is {}", alertEnabled ? "ENABLED" : "DISABLED");
   }
 
   public boolean shouldSendAlert() {
+    LOG.info("Alert is {}", alertEnabled);
     if (!alertEnabled) {
       return false;
     }
@@ -37,12 +39,12 @@ public class AlertManager {
   }
 
   public AlertMessageResponse sendTextAlert() {
+    LOG.info("Attempting to send alert");
     if (!shouldSendAlert()) {
       return new AlertMessageResponse(false, Set.of());
     }
 
     Twilio.init(System.getenv("TWILIO_ACCOUNT_SID"), System.getenv("TWILIO_AUTH_TOKEN"));
-
     String sender = System.getenv("TWILIO_SENDER");
     String[] recipients = System.getenv("TWILIO_RECIPIENTS").split(",");
 
@@ -57,6 +59,7 @@ public class AlertManager {
       messagesSent.add(message.getSid());
     }
 
+    LOG.info("Messages {} sent", messagesSent);
     return new AlertMessageResponse(true, messagesSent);
   }
 
