@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/Core/Core.iml" filepath="$PROJECT_DIR$/Core/Core.iml" group="com/sofia819/home" />
+      <module fileurl="file://$PROJECT_DIR$/HomeNotifications.iml" filepath="$PROJECT_DIR$/HomeNotifications.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Services/Services.iml" filepath="$PROJECT_DIR$/Services/Services.iml" group="com/sofia819/home" />
+    </modules>
+  </component>
+</project>

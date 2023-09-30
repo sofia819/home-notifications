@@ -1,0 +1,16 @@
+com\sofia819\home\notifications\DaggerManagerComponent.class
+com\sofia819\home\notifications\AlertManager.class
+com\sofia819\home\notifications\response\AlertStatusResponse.class
+com\sofia819\home\notifications\request\ArduinoLogRequest.class
+com\sofia819\home\notifications\DoorManager_Factory$InstanceHolder.class
+com\sofia819\home\notifications\DaggerManagerComponent$ManagerComponentImpl.class
+com\sofia819\home\notifications\ManagerComponent.class
+com\sofia819\home\notifications\DoorManager.class
+com\sofia819\home\notifications\DaggerManagerComponent$Builder.class
+com\sofia819\home\notifications\request\DoorStatusRequest.class
+com\sofia819\home\notifications\response\AlertMessageResponse.class
+com\sofia819\home\notifications\response\DoorStatusResponse.class
+com\sofia819\home\notifications\AlertManager_Factory$InstanceHolder.class
+com\sofia819\home\notifications\AlertManager_Factory.class
+com\sofia819\home\notifications\response\ArduinoLogResponse.class
+com\sofia819\home\notifications\DoorManager_Factory.class
