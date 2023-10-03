@@ -5,7 +5,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.slf4j.Logger;
@@ -16,18 +15,17 @@ public class DoorManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(DoorManager.class);
 
-  private Optional<Instant> doorOpenedSince;
+  private Instant doorOpenedSince;
   private boolean isDoorOpened;
   private AlertManager alertManager;
   private Clock clock;
 
-  DateTimeFormatter formatter = DateTimeFormatter.ofPattern(
-          "yyyy-MM-dd HH:mm:ss")
-      .withZone(ZoneId.of("America/New_York"));
+  DateTimeFormatter formatter =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("America/New_York"));
 
   @Inject
   public DoorManager(AlertManager alertManager) {
-    this.doorOpenedSince = Optional.empty();
+    this.doorOpenedSince = Instant.MIN;
     this.isDoorOpened = false;
     this.clock = Clock.systemUTC();
     this.alertManager = alertManager;
@@ -39,18 +37,19 @@ public class DoorManager {
 
     // If the door is closed, nothing to do
     if (!this.isDoorOpened) {
-      doorOpenedSince = Optional.empty();
+      doorOpenedSince = Instant.MIN;
       return;
     }
 
     // Door state changed, update timestamp then return
-    if (doorOpenedSince.isEmpty()) {
-      doorOpenedSince = Optional.of(clock.instant());
+    if (doorOpenedSince == Instant.MIN) {
+      doorOpenedSince = clock.instant();
       return;
     }
 
     // Door has been opened for a while, check how long
-    Duration timeBetween = Duration.between(doorOpenedSince.get(), clock.instant());
+    Instant currentTime = clock.instant();
+    Duration timeBetween = Duration.between(doorOpenedSince, currentTime);
     if (timeBetween.getSeconds() > Long.parseLong(System.getenv("DOOR_TIME_LIMIT"))) {
       alertManager.sendTextAlert();
     }
@@ -61,9 +60,6 @@ public class DoorManager {
   }
 
   public String getDoorOpenedSince() {
-    if (doorOpenedSince.isEmpty()) {
-      return "";
-    }
-    return formatter.format(doorOpenedSince.get());
+    return formatter.format(doorOpenedSince);
   }
 }
