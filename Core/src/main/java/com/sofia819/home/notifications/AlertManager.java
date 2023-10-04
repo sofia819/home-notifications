@@ -6,6 +6,7 @@ import com.twilio.rest.api.v2010.account.Message;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.Set;
 import javax.inject.Inject;
@@ -37,7 +38,7 @@ public class AlertManager {
       return false;
     }
 
-    LocalTime now = LocalTime.now();
+    LocalTime now = LocalTime.now(ZoneId.of("America/New_York"));
     int startHour = Integer.parseInt(System.getenv("START_HOUR"));
     int endHour = Integer.parseInt(System.getenv("END_HOUR"));
     return now.getHour() >= startHour && now.getHour() <= endHour;
