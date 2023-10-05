@@ -1,13 +1,14 @@
 package com.sofia819.home.notifications;
 
 import com.sofia819.home.notifications.response.AlertMessageResponse;
+import com.sofia819.home.notifications.response.AlertStatusResponse;
 import com.twilio.Twilio;
 import com.twilio.rest.api.v2010.account.Message;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -19,48 +20,66 @@ public class AlertManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(AlertManager.class);
 
-  private Instant lastMessageSentTime;
-  private boolean alertEnabled;
+  private boolean isAlertEnabled;
+  private Optional<Instant> lastMessageSentTime;
 
   @Inject
   public AlertManager() {
-    this.alertEnabled = false;
+    this.isAlertEnabled = false;
+    this.lastMessageSentTime = Optional.empty();
   }
 
   public void toggleAlertEnabled() {
-    lastMessageSentTime = Instant.MIN;
-    alertEnabled = !alertEnabled;
-    LOG.info("Alert is {}", alertEnabled ? "ENABLED" : "DISABLED");
+    isAlertEnabled = !isAlertEnabled;
+    LOG.info("Alert is {}", isAlertEnabled ? "ENABLED" : "DISABLED");
   }
 
-  public boolean shouldSendAlert() {
-    if (!alertEnabled) {
-      return false;
-    }
+  public AlertStatusResponse getAlertStatus() {
+    return new AlertStatusResponse(isAlertEnabled, isWithinTimeFrame());
+  }
 
+  public boolean shouldSendAlert(boolean overrideTimeframe) {
+    return isAlertEnabled && (overrideTimeframe || isWithinTimeFrame());
+  }
+
+  private boolean isWithinTimeFrame() {
     LocalTime now = LocalTime.now(ZoneId.of("America/New_York"));
     int startHour = Integer.parseInt(System.getenv("START_HOUR"));
     int endHour = Integer.parseInt(System.getenv("END_HOUR"));
+
     return now.getHour() >= startHour && now.getHour() <= endHour;
   }
 
-  public AlertMessageResponse sendTextAlert() {
-    if (!shouldSendAlert()) {
+  public AlertMessageResponse sendAlert(boolean overrideTimeframe) {
+    if (!shouldSendAlert(overrideTimeframe)) {
       LOG.info("Alert is not enabled");
       return new AlertMessageResponse(false, Set.of());
     }
 
-    Instant currentTime = Instant.now();
-    if (Duration.between(lastMessageSentTime, currentTime).getSeconds()
-        < Long.parseLong(System.getenv("DOOR_TIME_LIMIT"))) {
-      LOG.info("Not enough time has passed since last message");
+    if (lastMessageSentTime.isPresent()) {
+      LOG.info("A message has already been sent");
       return new AlertMessageResponse(false, Set.of());
     }
 
-    LOG.info("Attempting to send alert");
+    Set<String> messagesSent = sendTextMessage("Close the door");
+
+    return new AlertMessageResponse(true, messagesSent);
+  }
+
+  public void resetAlertStatus(boolean overrideTimeframe) {
+    if (lastMessageSentTime.isPresent() && shouldSendAlert(overrideTimeframe)) {
+      sendTextMessage("Door is closed");
+    }
+    lastMessageSentTime = Optional.empty();
+  }
+
+  private Set<String> sendTextMessage(String content) {
+    LOG.info("Attempting to send message with content {}", content);
+
     Twilio.init(System.getenv("TWILIO_ACCOUNT_SID"), System.getenv("TWILIO_AUTH_TOKEN"));
     String sender = System.getenv("TWILIO_SENDER");
-    String[] recipients = System.getenv("TWILIO_RECIPIENTS").split("\\+\\d{11}");
+
+    String[] recipients = System.getenv("TWILIO_RECIPIENTS").split(",");
 
     Set<String> messagesSent = new HashSet<>();
     for (String recipient : recipients) {
@@ -69,14 +88,15 @@ public class AlertManager {
             Message.creator(
                     new com.twilio.type.PhoneNumber(recipient),
                     new com.twilio.type.PhoneNumber(sender),
-                    "Close the door!")
+                    content)
                 .create();
         messagesSent.add(message.getSid());
       }
     }
 
     LOG.info("Messages {} sent", messagesSent);
-    lastMessageSentTime = currentTime;
-    return new AlertMessageResponse(true, messagesSent);
+    lastMessageSentTime = Optional.of(Instant.now());
+
+    return messagesSent;
   }
 }

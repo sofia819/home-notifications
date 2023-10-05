@@ -27,28 +27,27 @@ public class StatusResource {
 
   @GET
   @Path("/alert")
-  public AlertStatusResponse shouldSendAlert() {
-    return new AlertStatusResponse(alertManager.shouldSendAlert());
+  public AlertStatusResponse getAlertStatus() {
+    return alertManager.getAlertStatus();
   }
 
   @PUT
   @Path("/alert")
   public AlertStatusResponse toggleEnableAlert() {
     alertManager.toggleAlertEnabled();
-    return shouldSendAlert();
+    return getAlertStatus();
   }
 
   @GET
   @Path("/door")
   public DoorStatusResponse isDoorOpened() {
-    return new DoorStatusResponse(doorManager.getIsDoorOpened(),
-        doorManager.getDoorOpenedSince());
+    return new DoorStatusResponse(doorManager.getIsDoorOpened(), doorManager.getDoorOpenedSince());
   }
 
   @PUT
   @Path("/door")
   public DoorStatusResponse updateIsDoorOpened(DoorStatusRequest request) {
-    doorManager.updateIsDoorOpened(request.isDoorOpened());
+    doorManager.updateIsDoorOpened(request.isDoorOpened(), request.overrideTimeframe());
     return isDoorOpened();
   }
 }

@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.slf4j.Logger;
@@ -15,7 +16,7 @@ public class DoorManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(DoorManager.class);
 
-  private Instant doorOpenedSince;
+  private Optional<Instant> doorOpenedSince;
   private boolean isDoorOpened;
   private AlertManager alertManager;
   private Clock clock;
@@ -25,33 +26,34 @@ public class DoorManager {
 
   @Inject
   public DoorManager(AlertManager alertManager) {
-    this.doorOpenedSince = Instant.MIN;
+    this.doorOpenedSince = Optional.empty();
     this.isDoorOpened = false;
     this.clock = Clock.systemUTC();
     this.alertManager = alertManager;
   }
 
-  public void updateIsDoorOpened(boolean isDoorOpened) {
+  public void updateIsDoorOpened(boolean isDoorOpened, boolean overrideTimeframe) {
     this.isDoorOpened = isDoorOpened;
     LOG.info("Door is {}", isDoorOpened ? "OPENED" : "CLOSED");
 
-    // If the door is closed, nothing to do
+    // Door is closed
     if (!this.isDoorOpened) {
-      doorOpenedSince = Instant.MIN;
+      alertManager.resetAlertStatus(overrideTimeframe);
+      doorOpenedSince = Optional.empty();
       return;
     }
 
-    // Door state changed, update timestamp then return
-    if (doorOpenedSince == Instant.MIN) {
-      doorOpenedSince = clock.instant();
+    // Door was closed, but now opened, update timestamp
+    if (doorOpenedSince.isEmpty()) {
+      doorOpenedSince = Optional.of(clock.instant());
       return;
     }
 
-    // Door has been opened for a while, check how long
+    // Check how long the door has been opened
     Instant currentTime = clock.instant();
-    Duration timeBetween = Duration.between(doorOpenedSince, currentTime);
+    Duration timeBetween = Duration.between(doorOpenedSince.get(), currentTime);
     if (timeBetween.getSeconds() > Long.parseLong(System.getenv("DOOR_TIME_LIMIT"))) {
-      alertManager.sendTextAlert();
+      alertManager.sendAlert(overrideTimeframe);
     }
   }
 
@@ -60,6 +62,6 @@ public class DoorManager {
   }
 
   public String getDoorOpenedSince() {
-    return formatter.format(doorOpenedSince);
+    return doorOpenedSince.isEmpty() ? "" : formatter.format(doorOpenedSince.get());
   }
 }
