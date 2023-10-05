@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Dropwizard" type="Application" factoryName="Application">
+    <option name="ALTERNATIVE_JRE_PATH" value="C:\Program Files\Java\jdk-21" />
+    <option name="MAIN_CLASS_NAME" value="com.sofia819.home.notifications.HomeNotificationsApplication" />
+    <module name="Services" />
+    <option name="PROGRAM_PARAMETERS" value="server" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

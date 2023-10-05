@@ -1,9 +1,12 @@
 package com.sofia819.home.notifications;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sofia819.home.notifications.request.TextbeltRequest;
 import com.sofia819.home.notifications.response.AlertMessageResponse;
 import com.sofia819.home.notifications.response.AlertStatusResponse;
-import com.twilio.Twilio;
-import com.twilio.rest.api.v2010.account.Message;
+import com.sofia819.home.notifications.response.TextbeltResponse;
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -12,6 +15,13 @@ import java.util.Optional;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,11 +32,15 @@ public class AlertManager {
 
   private boolean isAlertEnabled;
   private Optional<Instant> lastMessageSentTime;
+  private final HttpClient httpClient;
+  private final ObjectMapper objectMapper;
 
   @Inject
   public AlertManager() {
     this.isAlertEnabled = false;
     this.lastMessageSentTime = Optional.empty();
+    this.httpClient = HttpClients.createMinimal();
+    this.objectMapper = new ObjectMapper();
   }
 
   public void toggleAlertEnabled() {
@@ -61,36 +75,33 @@ public class AlertManager {
       return new AlertMessageResponse(false, Set.of());
     }
 
-    Set<String> messagesSent = sendTextMessage("Close the door");
+    Set<String> messagesSent = sendTextMessages("Close the door");
 
     return new AlertMessageResponse(true, messagesSent);
   }
 
   public void resetAlertStatus(boolean overrideTimeframe) {
     if (lastMessageSentTime.isPresent() && shouldSendAlert(overrideTimeframe)) {
-      sendTextMessage("Door is closed");
+      sendTextMessages("Door is closed");
     }
     lastMessageSentTime = Optional.empty();
   }
 
-  private Set<String> sendTextMessage(String content) {
+  private Set<String> sendTextMessages(String content) {
     LOG.info("Attempting to send message with content {}", content);
 
-    Twilio.init(System.getenv("TWILIO_ACCOUNT_SID"), System.getenv("TWILIO_AUTH_TOKEN"));
-    String sender = System.getenv("TWILIO_SENDER");
-
-    String[] recipients = System.getenv("TWILIO_RECIPIENTS").split(",");
+    String[] recipients = System.getenv("RECIPIENTS").split(",");
+    String textbeltApiKey = System.getenv("TEXTBELT_API_KEY");
 
     Set<String> messagesSent = new HashSet<>();
     for (String recipient : recipients) {
       if (recipient.length() > 0) {
-        Message message =
-            Message.creator(
-                    new com.twilio.type.PhoneNumber(recipient),
-                    new com.twilio.type.PhoneNumber(sender),
-                    content)
-                .create();
-        messagesSent.add(message.getSid());
+        try {
+          messagesSent.add(
+              sendTextMessage(new TextbeltRequest(recipient, content, textbeltApiKey)));
+        } catch (Exception e) {
+          LOG.error("Failed to send message!");
+        }
       }
     }
 
@@ -98,5 +109,20 @@ public class AlertManager {
     lastMessageSentTime = Optional.of(Instant.now());
 
     return messagesSent;
+  }
+
+  private String sendTextMessage(TextbeltRequest textbeltRequest) throws IOException {
+    HttpPost httpPost = new HttpPost("https://textbelt.com/text");
+    httpPost.setEntity(
+        new StringEntity(
+            objectMapper.writeValueAsString(textbeltRequest), ContentType.APPLICATION_JSON));
+    HttpResponse httpResponse = httpClient.execute(httpPost);
+
+    TextbeltResponse textbeltResponse =
+        objectMapper.readValue(
+            EntityUtils.toString(httpResponse.getEntity(), Charset.defaultCharset()),
+            TextbeltResponse.class);
+
+    return textbeltResponse.textId();
   }
 }
