@@ -115,6 +115,7 @@ public class AlertManager {
               retryer.call(
                   () -> sendTextMessage(new TextbeltRequest(recipient, content, textbeltApiKey)));
           messagesSent.add(response.textId());
+          Thread.sleep(1000);
         } catch (Exception e) {
           LOG.error("Failed to send message for {}", recipient, e);
         }
