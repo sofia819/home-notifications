@@ -1,6 +1,10 @@
 package com.sofia819.home.notifications;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.rholder.retry.Retryer;
+import com.github.rholder.retry.RetryerBuilder;
+import com.github.rholder.retry.StopStrategies;
+import com.github.rholder.retry.WaitStrategies;
 import com.sofia819.home.notifications.request.TextbeltRequest;
 import com.sofia819.home.notifications.response.AlertMessageResponse;
 import com.sofia819.home.notifications.response.AlertStatusResponse;
@@ -13,6 +17,7 @@ import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.http.HttpResponse;
@@ -34,6 +39,7 @@ public class AlertManager {
   private Optional<Instant> lastMessageSentTime;
   private final HttpClient httpClient;
   private final ObjectMapper objectMapper;
+  private final Retryer<TextbeltResponse> retryer;
 
   @Inject
   public AlertManager() {
@@ -41,6 +47,14 @@ public class AlertManager {
     this.lastMessageSentTime = Optional.empty();
     this.httpClient = HttpClients.createMinimal();
     this.objectMapper = new ObjectMapper();
+
+    retryer =
+        RetryerBuilder.<TextbeltResponse>newBuilder()
+            .retryIfResult(response -> !response.success())
+            .retryIfExceptionOfType(Exception.class)
+            .withStopStrategy(StopStrategies.stopAfterAttempt(3))
+            .withWaitStrategy(WaitStrategies.fixedWait(1, TimeUnit.SECONDS))
+            .build();
   }
 
   public void toggleAlertEnabled() {
@@ -97,10 +111,12 @@ public class AlertManager {
     for (String recipient : recipients) {
       if (recipient.length() > 0) {
         try {
-          messagesSent.add(
-              sendTextMessage(new TextbeltRequest(recipient, content, textbeltApiKey)));
+          TextbeltResponse response =
+              retryer.call(
+                  () -> sendTextMessage(new TextbeltRequest(recipient, content, textbeltApiKey)));
+          messagesSent.add(response.textId());
         } catch (Exception e) {
-          LOG.error("Failed to send message!");
+          LOG.error("Failed to send message for {}", recipient, e);
         }
       }
     }
@@ -111,18 +127,15 @@ public class AlertManager {
     return messagesSent;
   }
 
-  private String sendTextMessage(TextbeltRequest textbeltRequest) throws IOException {
+  private TextbeltResponse sendTextMessage(TextbeltRequest textbeltRequest) throws IOException {
     HttpPost httpPost = new HttpPost("https://textbelt.com/text");
     httpPost.setEntity(
         new StringEntity(
             objectMapper.writeValueAsString(textbeltRequest), ContentType.APPLICATION_JSON));
     HttpResponse httpResponse = httpClient.execute(httpPost);
 
-    TextbeltResponse textbeltResponse =
-        objectMapper.readValue(
-            EntityUtils.toString(httpResponse.getEntity(), Charset.defaultCharset()),
-            TextbeltResponse.class);
-
-    return textbeltResponse.textId();
+    return objectMapper.readValue(
+        EntityUtils.toString(httpResponse.getEntity(), Charset.defaultCharset()),
+        TextbeltResponse.class);
   }
 }
