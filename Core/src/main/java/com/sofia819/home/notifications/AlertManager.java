@@ -43,7 +43,7 @@ public class AlertManager {
 
   @Inject
   public AlertManager() {
-    this.isAlertEnabled = false;
+    this.isAlertEnabled = true;
     this.lastMessageSentTime = Optional.empty();
     this.httpClient = HttpClients.createMinimal();
     this.objectMapper = new ObjectMapper();
